@@ -1,0 +1,41 @@
+#!/bin/bash
+
+SSH_REMOTE=shared
+
+PID=""
+function update_pid {
+	PID=$(ps aux | grep 'ssh -D' | grep -v grep | awk '{print $2}')
+}
+
+case "$1" in
+	ps)
+		update_pid
+		echo "PID" $PID
+		[ -n "$PID" ] && echo "running" || echo "not running"
+	;;
+
+	stop)
+		update_pid
+		if [ -n "$PID" ]
+		then
+			echo "killing all SOCKS connections"
+			ps aux | grep "ssh -D" | grep -v grep | while read line; do kill -9 `echo $line | awk '{print $2}'`; done
+		else
+			echo "SOCKS not running"
+		fi
+	;;
+
+	*)
+		update_pid
+		if [ -z "$PID" ]
+		then
+			ssh -D 8080 -fCqN $SSH_REMOTE
+			echo "started SOCKS connection to shared"
+
+			# open firefox preferences for proxy setup
+			/usr/bin/firefox "about:preferences"
+		else
+			echo "SOCKS already running. Run \"socks stop\" to kill the proxy"
+		fi
+	;;
+esac
